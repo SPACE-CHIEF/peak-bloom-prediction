@@ -1,0 +1,150 @@
+---
+title: "AVG Seasonal Temperature Model"
+author: "Roberto Saravia"
+date: "2/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE
+)
+library(tidyverse)
+```
+
+Read cherry blossom data.
+```{r}
+cherry <- read.csv("data/washingtondc.csv") %>% 
+  bind_rows(read.csv("data/liestal.csv")) %>% 
+  bind_rows(read.csv("data/kyoto.csv"))
+```
+
+
+Collect temperature data.
+```{r}
+library(rnoaa)
+stations <- ghcnd_stations()
+
+#' Get the annual average maximum temperature at the given station,
+#' separated into the 4 meteorological seasons (Winter, Spring, Summer, Fall).
+#' 
+#' The seasons are span 3 months each.
+#' Winter is from December to February, Spring from March to May,
+#' Summer from June to August, and Fall from September to November.
+#' Note that December is counted towards the Winter of the next year, i.e.,
+#' temperatures in December 2020 are accounted for in Winter 2021.
+#' 
+#' @param stationid the `rnoaa` station id (see [ghcnd_stations()])
+#' @param varid the `gchnd_stations()` vars (single)
+#' @return a data frame with columns
+#'   - `year` ... the year of the observations
+#'   - `season` ... the season (Winter, Spring, Summer, Fall)
+#'   - `tmax_avg` ... average maximum temperature in tenth degree Celsius
+#'   - `tmin_avg` ... average minimum temperature in tenth degree Celcius
+get_temperature <- function (stationid) {
+  ghcnd_search(stationid = stationid, var = c("tavg"), 
+               refresh = T)[[1]] %>%
+  mutate(year = as.integer(format(date, "%Y")),
+         month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
+         season = cut(month, breaks = c(0, 2, 5, 8, 11),
+                      include.lowest = TRUE,
+                      labels = c("Winter", "Spring", "Summer", "Fall")),
+         year = if_else(month == 0, year + 1L, year)) %>%
+  group_by(year, season) %>%
+  summarize(tavg = mean(tavg, na.rm = TRUE))
+}
+
+
+historic_temperatures_tmax <-
+  tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
+  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
+
+# get_temperature() replace tmax in var = c("tmax")
+# to tmin
+historic_temperatures_tmin <-
+  tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
+  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
+
+# get_temperature() replace tmax in var = c("tmax")
+# to tavg
+historic_temperatures_tavg <-
+  tibble(location = "washingtondc", get_temperature("USC00186350"))
+
+
+# get_temperature() replace tmax in var = c("tmax")
+# to tavg
+historic_temperatures_prcp <-
+  tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
+  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
+```
+
+Join datasets.
+```{r}
+yearly_temp <- cherry %>%
+  filter(location == "washingtondc")
+
+historic_temperatures_tmax <- historic_temperatures_tmax %>%
+  filter(location == "washingtondc")
+
+historic_temperatures_tmin <- historic_temperatures_tmin %>%
+  filter(location == "washingtondc")
+
+datasets <- list(historic_temperatures_tmax, 
+                 historic_temperatures_tmin, 
+                 yearly_temp)
+
+yearly_temps_dc <- full_join(historic_temperatures_tmax,
+          historic_temperatures_tmin) %>%
+  left_join(yearly_temp)
+```
+
+Correlations.
+```{r}
+yearly_temps_dc %>%
+filter(season == "Spring") %>%
+ggplot(aes(x = tmin_avg, y = bloom_doy)) +
+  geom_point()
+
+spring_temps_dc <- yearly_temps_dc %>%
+filter(season == "Spring")
+
+# We have to consider the previous summer for the current year.
+# For example a peak bloom on 2019, we would consider the 
+# tmax_avg for the summer of 2018
+summer_temps_dc <- yearly_temps_dc %>%
+  filter(season == "Summer")
+
+tmp1 <- summer_temps_dc$tmax_avg
+tmp1 <- tmp1[-length(tmp1)]
+tmp2 <- summer_temps_dc$tmin_avg
+tmp2 <- tmp2[-length(tmp2)]
+summer_temps_dc <- summer_temps_dc[-c(1), ]
+summer_temps_dc$tmax_avg <- tmp1
+summer_temps_dc$tmin_avg <- tmp2
+
+# Spring data was not recorded for the year 1953
+# Drop that value in summer too.
+summer_temps_dc <- summer_temps_dc[-c(3), ]
+# Drop Spring for 1950 since we could not include that year
+# in the summer.
+spring_temps_dc <- spring_temps_dc[-c(1), ]
+
+# Finalize the data that will be used to create our base
+# model.
+model_data <- full_join(summer_temps_dc,
+          spring_temps_dc)
+```
+
+Create the basic linear regression model for Washington DC.
+```{r}
+model1 <- lm(data = model_data, 
+             formula = bloom_doy ~ tmax_avg*season + tmin_avg*season)
+```
+

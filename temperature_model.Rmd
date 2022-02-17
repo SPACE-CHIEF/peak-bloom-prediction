@@ -43,7 +43,7 @@ stations <- ghcnd_stations()
 #'   - `tmax_avg` ... average maximum temperature in tenth degree Celsius
 #'   - `tmin_avg` ... average minimum temperature in tenth degree Celcius
 get_temperature <- function (stationid) {
-  ghcnd_search(stationid = stationid, var = c("tmin"), 
+  ghcnd_search(stationid = stationid, var = c("tmax"), 
                refresh = T)[[1]] %>%
   mutate(year = as.integer(format(date, "%Y")),
          month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
@@ -52,7 +52,7 @@ get_temperature <- function (stationid) {
                       labels = c("Winter", "Spring", "Summer", "Fall")),
          year = if_else(month == 0, year + 1L, year)) %>%
   group_by(year, season) %>%
-  summarize(tmin_avg = mean(tmin, na.rm = TRUE))
+  summarize(tmax_avg = mean(tmax, na.rm = TRUE))
 }
 
 
@@ -150,7 +150,36 @@ model_data <- model_data %>%
 Create the basic linear regression model for Washington DC.
 ```{r}
 model1 <- lm(data = model_data, 
-             formula = bloom_doy ~ difference*year + tmax_avg*season)
+             formula = bloom_doy ~ difference*year + tmax_avg*season * season*year)
 ```
 
+
+Get more data.
+```{r}
+get_all_variables <- function (stationid) {
+  ghcnd_search(stationid = stationid, refresh = T)
+}
+
+all_data <- get_all_variables("USC00186350")
+
+t2 <- all_data %>%
+  reduce(full_join, by = "date")
+t2 <- t2 %>%
+   mutate(year = as.integer(format(date, "%Y")),
+         month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
+         season = cut(month, breaks = c(0, 2, 5, 8, 11),
+                      include.lowest = TRUE,
+                      labels = c("Winter", "Spring", "Summer", "Fall")),
+         year = if_else(month == 0, year + 1L, year),
+         difference = (tmax - tmin)/2)
+
+t2 <- t2 %>%
+  dplyr::select(year, season, date, difference, tmax, tmin, prcp, snow, snwd, tobs)
+
+
+t2[is.na(t2)] <- 0
+
+model2 <- lm(data = t2, 
+             formula = year ~ date + prcp + snwd + season)
+```
 

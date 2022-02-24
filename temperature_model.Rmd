@@ -43,7 +43,7 @@ stations <- ghcnd_stations()
 #'   - `tmax_avg` ... average maximum temperature in tenth degree Celsius
 #'   - `tmin_avg` ... average minimum temperature in tenth degree Celcius
 get_temperature <- function (stationid) {
-  ghcnd_search(stationid = stationid, var = c("tmax"), 
+  ghcnd_search(stationid = stationid, var = c("tmin"), 
                refresh = T)[[1]] %>%
   mutate(year = as.integer(format(date, "%Y")),
          month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
@@ -52,7 +52,7 @@ get_temperature <- function (stationid) {
                       labels = c("Winter", "Spring", "Summer", "Fall")),
          year = if_else(month == 0, year + 1L, year)) %>%
   group_by(year, season) %>%
-  summarize(tmax_avg = mean(tmax, na.rm = TRUE))
+  summarize(tmin_avg = mean(tmin, na.rm = TRUE))
 }
 
 
@@ -153,7 +153,6 @@ model1 <- lm(data = model_data,
              formula = bloom_doy ~ difference*year + tmax_avg*season * season*year)
 ```
 
-
 Get more data.
 ```{r}
 get_all_variables <- function (stationid) {
@@ -161,9 +160,15 @@ get_all_variables <- function (stationid) {
 }
 
 all_data <- get_all_variables("USC00186350")
+historic_weather <-
+  tibble(location = "washingtondc", get_all_variables("USC00186350")) %>%
+  bind_rows(tibble(location = "liestal", get_all_variables("GME00127786"))) %>%
+  bind_rows(tibble(location = "kyoto", get_all_variables("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_all_variables("CA001108395")))
 
 t2 <- all_data %>%
-  reduce(full_join, by = "date")
+  reduce(full_join, by = c("date", "id", "qflag", "mflag",
+                           "sflag"))
 t2 <- t2 %>%
    mutate(year = as.integer(format(date, "%Y")),
          month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
@@ -180,6 +185,330 @@ t2 <- t2 %>%
 t2[is.na(t2)] <- 0
 
 model2 <- lm(data = t2, 
-             formula = year ~ date + prcp + snwd + season)
+             formula = difference ~ date + prcp + snwd + season)
+```
+
+```{r}
+library(rnoaa)
+dc <- ghcnd_stations(id = "USC00186350")
+dc_sub <- subset(dc, id == "USC00186350")
+
+dc_sub
+
+dc %>%
+  filter(id == "USC00186350")
+
+
+dc_meteo_month <- ghcnd(stationid = "USC00186350", refresh = T)
+
+
+dc_meteo_day <- ghcnd_search(stationid = "USC00186350", refresh = T)
+
+dc_meteo_day[["tmax"]] %>%
+  left_join(dc_meteo_day[["tmin"]]) %>%
+  left_join(dc_meteo_day[["prcp"]]) %>%
+  left_join(dc_meteo_day[["snow"]]) %>%
+  left_join(dc_meteo_day[["snwd"]]) %>%
+  left_join(dc_meteo_day[["tobs"]]) %>%
+  left_join(dc_meteo_day[["dapr"]]) %>%
+  left_join(dc_meteo_day[["mdpr"]]) %>%
+  left_join(dc_meteo_day[["wt04"]]) %>%
+  left_join(dc_meteo_day[["wt05"]]) %>%
+  left_join(dc_meteo_day[["wt01"]]) %>%
+  left_join(dc_meteo_day[["wt03"]]) %>%
+  left_join(dc_meteo_day[["wt11"]]) %>%  
+  left_join(dc_meteo_day[["dasf"]]) %>%             
+  left_join(dc_meteo_day[["mdsf"]]) %>%  
+  left_join(dc_meteo_day[["wesd"]])
+
+
+dc_meteo_all <- dc_meteo_day %>%
+  reduce(full_join, by = c("date", "id", "qflag", "sflag", "mflag"))
+
+dc_meteo_all_subset <- dc_meteo_all[c(-4,-5,-6)]
+
+
+
+dc_something <- dc_meteo_all_subset %>%
+  mutate(year = lubridate::year(dc_meteo_all_subset$date))
+
+dc_tmin <- dc_something %>%
+  group_by(year) %>%
+  summarise(min = mean(tmin, na.rm = T))
+dc_tmax <- dc_something %>%
+  group_by(year) %>%
+  summarise(max = mean(tmax, na.rm = T))
+dc_prcp <- dc_something %>%
+  group_by(year) %>%
+  summarise(prcp = mean(prcp, na.rm = T))
+dc_snow <- dc_something %>%
+  group_by(year) %>%
+  summarise(snow = mean(snow, na.rm = T))
+dc_snwd <- dc_something %>%
+  group_by(year) %>%
+  summarise(snwd = mean(snwd, na.rm = T))
+dc_tobs <- dc_something %>%
+  group_by(year) %>%
+  summarise(tobs = mean(tobs, na.rm = T))
+dc_dapr <- dc_something %>%
+  group_by(year) %>%
+  summarise(dapr = mean(dapr, na.rm = T))
+dc_mdpr <- dc_something %>%
+  group_by(year) %>%
+  summarise(mdpr = mean(mdpr, na.rm = T))
+dc_wt04 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt04 = mean(wt04, na.rm = T))
+dc_wt05 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt05 = mean(wt05, na.rm = T))
+dc_wt01 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt01 = mean(wt01, na.rm = T))
+dc_wt03 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt03 = mean(wt03, na.rm = T))
+dc_wt11 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt11 = mean(wt11, na.rm = T))
+dc_dasf <- dc_something %>%
+  group_by(year) %>%
+  summarise(dasf = mean(dasf, na.rm = T))
+dc_mdsf <- dc_something %>%
+  group_by(year) %>%
+  summarise(mdsf = mean(mdsf, na.rm = T))
+dc_wt06 <- dc_something %>%
+  group_by(year) %>%
+  summarise(wt06 = mean(wt06, na.rm = T))
+dc_wesd <- dc_something %>%
+  group_by(year) %>%
+  summarise(wesd = mean(wesd, na.rm = T))
+
+dc_big <- dc_tmin %>%
+  left_join(dc_prcp) %>%
+  left_join(dc_tmax) %>%
+  left_join(dc_snow) %>%
+  left_join(dc_snwd) %>%
+  left_join(dc_tobs) %>%
+  left_join(dc_dapr) %>%
+  left_join(dc_mdpr) %>%
+  left_join(dc_wt04) %>%
+  left_join(dc_wt05) %>%
+  left_join(dc_wt01) %>%
+  left_join(dc_wt03) %>%
+  left_join(dc_wt11) %>%
+  left_join(dc_dasf) %>%
+  left_join(dc_mdsf) %>%
+  left_join(dc_wt06) %>%
+  left_join(dc_wesd)
+
+dc_big$dapr[is.nan(dc_big$dapr)]<-0
+dc_big$mdpr[is.nan(dc_big$mdpr)]<-0
+dc_big$wt04[is.nan(dc_big$wt04)]<-0
+dc_big$wt05[is.nan(dc_big$wt05)]<-0
+dc_big$wt01[is.nan(dc_big$wt01)]<-0
+dc_big$wt03[is.nan(dc_big$wt03)]<-0
+dc_big$wt11[is.nan(dc_big$wt11)]<-0
+dc_big$dasf[is.nan(dc_big$dasf)]<-0
+dc_big$mdsf[is.nan(dc_big$mdsf)]<-0
+dc_big$wesd[is.nan(dc_big$wesd)]<-0
+dc_big$wesdf <- NULL
+dc_big$wt06[is.nan(dc_big$wt06)]<-0
+
+
+dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+
+for(year in 1999:2020) {
+  path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
+               year, ".csv")
+  dc_solar_irradiation <-
+  bind_rows(dc_solar_irradiation,
+  read.csv(path, skip = 2))
+}
+
+dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
+dc_solar_mean <- dc_solar_irradiation %>%
+   filter(Month < 4) %>%
+   group_by(Year) %>%
+   summarise(avg_ghi = mean(GHI),
+             avg_dni = mean(DNI),
+             avg_dhi = mean(DHI),
+             avg_clearsky = mean(Clearsky.GHI),
+             avg_dew = mean(Dew.Point),
+             avg_albedo = mean(Surface.Albedo),
+             avg_windspeed = mean(Wind.Speed),
+             avg_humidity = mean(Relative.Humidity),
+             avg_temp = mean(Temperature),
+             avg_pressure = mean(Pressure)
+             )
+# dc_solar_mean <- rename(dc_solar_mean, year = Year)
+dc_big_bloom_day <-  cherry %>%
+  select(year, bloom_doy) %>%
+  right_join(dc_big, by = "year") %>%
+  right_join(dc_solar_mean, by="year")
+```
+
+Lasso Regression
+```{r}
+library(glmnet)
+index <- sample(1:nrow(dc_big_bloom_day), 0.7*nrow(dc_big_bloom_day))
+#define response variable
+train <- dc_big_bloom_day[index, ]
+test <- dc_big_bloom_day[-index, ]
+train.x <- data.matrix(train[, -2])
+train.y <- data.matrix(train$bloom_doy)
+test.x <- data.matrix(test[, -2])
+test.y <- data.matrix(test$bloom_doy)
+# Ridge Regression
+lambdas <- 10^seq(2, -3, by = -.1)
+ridge_reg <- glmnet(train.x, train.y, nlambda = 25, alpha = 0, family = 'gaussian', lambda = lambdas)
+cv_ridge <- cv.glmnet(train.x, train.y, alpha = 0, lambda = lambdas)
+optimal_lambda <- cv_ridge$lambda.min
+
+# Compute R^2 from true and predicted values
+eval_results <- function(true, predicted, df) {
+  SSE <- sum((predicted - true)^2)
+  SST <- sum((true - mean(true))^2)
+  R_square <- 1 - SSE / SST
+  RMSE = sqrt(SSE/nrow(df))
+
+  
+    # Model performance metrics
+  data.frame(
+    RMSE = RMSE,
+    Rsquare = R_square
+  )
+  
+}
+
+
+# Prediction and evaluation on train data
+predictions_train <- predict(ridge_reg, s = optimal_lambda, newx = train.x)
+eval_results(train.y, predictions_train, train.x)
+
+# Prediction and evaluation on test data
+predictions_test <- predict(ridge_reg, s = optimal_lambda, newx = test.x)
+eval_results(test.y, predictions_test, test.x)
+
+
+
+# ---------------LASSO-----------------------------------
+y <- data.matrix(dc_big_bloom_day$bloom_doy)
+
+#define matrix of predictor variables
+x <- data.matrix(dc_big_bloom_day[, -2])
+
+
+#perform k-fold cross-validation to find optimal lambda value
+cv_model <- cv.glmnet(x, y, alpha = 1)
+
+#find optimal lambda value that minimizes test MSE
+best_lambda <- cv_model$lambda.min
+best_lambda
+
+best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(best_model)
+#use fitted best model to make predictions
+# y_predicted <- predict(best_model, s = best_lambda, newx = x)
+
+#find SST and SSE
+# sst <- sum((y - mean(y))^2)
+# sse <- sum((y_predicted - y)^2)
+
+#find R-Squared
+# rsq <- 1 - sse/sst
+# rsq
+# Create a linear regression model from the lasso results
+# Prediction and evaluation on train data
+# predictions_train <- predict(best_model, s = best_lambda, newx = train.x)
+# eval_results(train.y, predictions_train, train.x)
+
+# Prediction and evaluation on test data
+# predictions_test <- predict(best_model, s = best_lambda, newx = test.x)
+# eval_results(test.y, predictions_test, test.x)
+big_model_dc <- lm(bloom_doy ~ wt11 + avg_dew + avg_clearsky + avg_dni,data = dc_big_bloom_day)
+```
+
+```{r}
+library(randomForest)
+library(ROCR)
+sample <- sample(1:nrow(dc_big_bloom_day), 0.7 * nrow(dc_big_bloom_day))
+train.x <- dc_big_bloom_day[sample, -2]
+train.y <- dc_big_bloom_day[sample, 2]
+test.x <- dc_big_bloom_day[-sample, -2]
+test.y <- dc_big_bloom_day[-sample, 2]
+
+rf <- randomForest::randomForest(train.x, train.y,
+                                 test.x, test.y,
+                                 importance = T, proximity = T,
+                                 ntree = 500,
+                                 mtry = 7)
+
+# extract OOB & validation errors
+oob <- sqrt(rf$mse)
+validation <- sqrt(rf$test$mse)
+
+# compare error rates
+tibble::tibble(
+  `Out of Bag Error` = oob,
+  `Test error` = validation,
+  ntrees = 1:rf$ntree
+) %>%
+  gather(Metric, RMSE, -ntrees) %>%
+  ggplot(aes(ntrees, RMSE, color = Metric)) +
+  geom_line() +
+  xlab("Number of trees")
+
+m2 <- tuneRF(
+  x          = train.x,
+  y          = train.y,
+  ntreeTry   = 500,
+  mtryStart  = 10,
+  stepFactor = 1.5,
+  improve    = 0.01,
+  trace      = FALSE      # to not show real-time progress 
+)
+
+# hyperparameter grid search
+hyper_grid <- expand.grid(
+  mtry       = seq(1, 18, by = 1),
+  node_size  = seq(1, 9, by = 2),
+  sampe_size = c(.55, .632, .70, .80),
+  OOB_RMSE   = 0
+)
+
+library(ranger)
+features <- setdiff(names(train.x), "Sale_Price")
+train <- dc_big_bloom_day[sample, ]
+for(i in 1:nrow(hyper_grid)) {
+  
+  # train model
+  model <- ranger(
+    formula         = bloom_doy ~ ., 
+    data            = train, 
+    num.trees       = 500,
+    mtry            = hyper_grid$mtry[i],
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i],
+    seed            = 123,
+    importance = 'impurity'
+  )
+  
+  # add OOB error to grid
+  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+}
+
+hyper_grid %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(10)
+
+model$variable.importance %>% 
+  tidy() %>%
+  dplyr::arrange(desc(x)) %>%
+  dplyr::top_n(10) %>%
+  ggplot(aes(reorder(names, x), x)) +
+  geom_col() +
+  coord_flip() +
+  ggtitle("Top 10 important variables")
 ```
 

@@ -232,171 +232,242 @@ dc_meteo_all_subset <- dc_meteo_all[c(-4,-5,-6)]
 dc_something <- dc_meteo_all_subset %>%
   mutate(year = lubridate::year(dc_meteo_all_subset$date))
 
-dc_tmin <- dc_something %>%
-  group_by(year) %>%
-  summarise(min = mean(tmin, na.rm = T))
-dc_tmax <- dc_something %>%
-  group_by(year) %>%
-  summarise(max = mean(tmax, na.rm = T))
-dc_prcp <- dc_something %>%
-  group_by(year) %>%
-  summarise(prcp = mean(prcp, na.rm = T))
-dc_snow <- dc_something %>%
-  group_by(year) %>%
-  summarise(snow = mean(snow, na.rm = T))
-dc_snwd <- dc_something %>%
-  group_by(year) %>%
-  summarise(snwd = mean(snwd, na.rm = T))
-dc_tobs <- dc_something %>%
-  group_by(year) %>%
-  summarise(tobs = mean(tobs, na.rm = T))
-dc_dapr <- dc_something %>%
-  group_by(year) %>%
-  summarise(dapr = mean(dapr, na.rm = T))
-dc_mdpr <- dc_something %>%
-  group_by(year) %>%
-  summarise(mdpr = mean(mdpr, na.rm = T))
-dc_wt04 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt04 = mean(wt04, na.rm = T))
-dc_wt05 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt05 = mean(wt05, na.rm = T))
-dc_wt01 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt01 = mean(wt01, na.rm = T))
-dc_wt03 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt03 = mean(wt03, na.rm = T))
-dc_wt11 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt11 = mean(wt11, na.rm = T))
-dc_dasf <- dc_something %>%
-  group_by(year) %>%
-  summarise(dasf = mean(dasf, na.rm = T))
-dc_mdsf <- dc_something %>%
-  group_by(year) %>%
-  summarise(mdsf = mean(mdsf, na.rm = T))
-dc_wt06 <- dc_something %>%
-  group_by(year) %>%
-  summarise(wt06 = mean(wt06, na.rm = T))
-dc_wesd <- dc_something %>%
-  group_by(year) %>%
-  summarise(wesd = mean(wesd, na.rm = T))
+dc_something <- 
+  dc_something %>%
+  mutate(year = as.integer(format(date, "%Y")),
+         month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
+         season = cut(month, breaks = c(0, 2, 5, 8, 11),
+                      include.lowest = TRUE,
+                      labels = c("Winter", "Spring", "Summer", "Fall")),
+         year = if_else(month == 0, year + 1L, year)) %>%
+  group_by(year, season) %>%
+  summarize(tmin = mean(tmin, na.rm = T),
+            tmax = mean(tmax, na.rm = T),
+            prcp = mean(prcp, na.rm = T),
+            snow = mean(snow, na.rm = T),
+            snwd = mean(snwd, na.rm = T),
+            tobs = mean(tobs, na.rm = T),
+            dapr = mean(dapr, na.rm = T),
+            mdpr = mean(mdpr, na.rm = T),
+            wt04 = mean(wt04, na.rm = T),
+            wt05 = mean(wt05, na.rm = T),
+            wt01 = mean(wt01, na.rm = T),
+            wt03 = mean(wt03, na.rm = T),
+            wt11 = mean(wt11, na.rm = T),
+            dasf = mean(dasf, na.rm = T),
+            mdsf = mean(mdsf, na.rm = T),
+            wt06 = mean(wt06, na.rm = T),
+            wesd = mean(wesd, na.rm = T))
 
-dc_big <- dc_tmin %>%
-  left_join(dc_prcp) %>%
-  left_join(dc_tmax) %>%
-  left_join(dc_snow) %>%
-  left_join(dc_snwd) %>%
-  left_join(dc_tobs) %>%
-  left_join(dc_dapr) %>%
-  left_join(dc_mdpr) %>%
-  left_join(dc_wt04) %>%
-  left_join(dc_wt05) %>%
-  left_join(dc_wt01) %>%
-  left_join(dc_wt03) %>%
-  left_join(dc_wt11) %>%
-  left_join(dc_dasf) %>%
-  left_join(dc_mdsf) %>%
-  left_join(dc_wt06) %>%
-  left_join(dc_wesd)
+dc_something$dapr[is.nan(dc_something$dapr)]<-0
+dc_something$mdpr[is.nan(dc_something$mdpr)]<-0
+dc_something$wt04[is.nan(dc_something$wt04)]<-0
+dc_something$wt05[is.nan(dc_something$wt05)]<-0
+dc_something$wt01[is.nan(dc_something$wt01)]<-0
+dc_something$wt03[is.nan(dc_something$wt03)]<-0
+dc_something$wt11[is.nan(dc_something$wt11)]<-0
+dc_something$dasf[is.nan(dc_something$dasf)]<-0
+dc_something$mdsf[is.nan(dc_something$mdsf)]<-0
+dc_something$wesd[is.nan(dc_something$wesd)]<-0
+dc_something$wesdf <- NULL
+dc_something$wt06[is.nan(dc_something$wt06)]<-0
 
-dc_big$dapr[is.nan(dc_big$dapr)]<-0
-dc_big$mdpr[is.nan(dc_big$mdpr)]<-0
-dc_big$wt04[is.nan(dc_big$wt04)]<-0
-dc_big$wt05[is.nan(dc_big$wt05)]<-0
-dc_big$wt01[is.nan(dc_big$wt01)]<-0
-dc_big$wt03[is.nan(dc_big$wt03)]<-0
-dc_big$wt11[is.nan(dc_big$wt11)]<-0
-dc_big$dasf[is.nan(dc_big$dasf)]<-0
-dc_big$mdsf[is.nan(dc_big$mdsf)]<-0
-dc_big$wesd[is.nan(dc_big$wesd)]<-0
-dc_big$wesdf <- NULL
-dc_big$wt06[is.nan(dc_big$wt06)]<-0
+dc_seasonal_weather <- dc_something %>%
+  pivot_wider(names_from = season, values_from = c(
+    tmin, tmax, prcp, snow, snwd, tobs, dapr,
+    mdpr, wt04, wt05, wt01, wt03, wt11, dasf,
+    mdsf, wt06, wesd
+  )) %>%
+  na.omit()
 
+dc_seasonal_weather <- cherry %>%
+  dplyr::select(year, bloom_doy) %>%
+  right_join(dc_seasonal_weather, by = "year")
 
-dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+# -----------------------OLD-----------------------
+# dc_tmin <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(min = mean(tmin, na.rm = T))
+# dc_tmax <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(max = mean(tmax, na.rm = T))
+# dc_prcp <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(prcp = mean(prcp, na.rm = T))
+# dc_snow <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(snow = mean(snow, na.rm = T))
+# dc_snwd <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(snwd = mean(snwd, na.rm = T))
+# dc_tobs <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(tobs = mean(tobs, na.rm = T))
+# dc_dapr <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(dapr = mean(dapr, na.rm = T))
+# dc_mdpr <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(mdpr = mean(mdpr, na.rm = T))
+# dc_wt04 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt04 = mean(wt04, na.rm = T))
+# dc_wt05 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt05 = mean(wt05, na.rm = T))
+# dc_wt01 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt01 = mean(wt01, na.rm = T))
+# dc_wt03 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt03 = mean(wt03, na.rm = T))
+# dc_wt11 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt11 = mean(wt11, na.rm = T))
+# dc_dasf <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(dasf = mean(dasf, na.rm = T))
+# dc_mdsf <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(mdsf = mean(mdsf, na.rm = T))
+# dc_wt06 <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wt06 = mean(wt06, na.rm = T))
+# dc_wesd <- dc_something %>%
+#   group_by(year) %>%
+#   summarise(wesd = mean(wesd, na.rm = T))
+# 
+# dc_big <- dc_tmin %>%
+#   left_join(dc_prcp) %>%
+#   left_join(dc_tmax) %>%
+#   left_join(dc_snow) %>%
+#   left_join(dc_snwd) %>%
+#   left_join(dc_tobs) %>%
+#   left_join(dc_dapr) %>%
+#   left_join(dc_mdpr) %>%
+#   left_join(dc_wt04) %>%
+#   left_join(dc_wt05) %>%
+#   left_join(dc_wt01) %>%
+#   left_join(dc_wt03) %>%
+#   left_join(dc_wt11) %>%
+#   left_join(dc_dasf) %>%
+#   left_join(dc_mdsf) %>%
+#   left_join(dc_wt06) %>%
+#   left_join(dc_wesd)
+# 
+# dc_big$dapr[is.nan(dc_big$dapr)]<-0
+# dc_big$mdpr[is.nan(dc_big$mdpr)]<-0
+# dc_big$wt04[is.nan(dc_big$wt04)]<-0
+# dc_big$wt05[is.nan(dc_big$wt05)]<-0
+# dc_big$wt01[is.nan(dc_big$wt01)]<-0
+# dc_big$wt03[is.nan(dc_big$wt03)]<-0
+# dc_big$wt11[is.nan(dc_big$wt11)]<-0
+# dc_big$dasf[is.nan(dc_big$dasf)]<-0
+# dc_big$mdsf[is.nan(dc_big$mdsf)]<-0
+# dc_big$wesd[is.nan(dc_big$wesd)]<-0
+# dc_big$wesdf <- NULL
+# dc_big$wt06[is.nan(dc_big$wt06)]<-0
+# 
+# 
+# dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
 
-for(year in 1999:2020) {
-  path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
-               year, ".csv")
-  dc_solar_irradiation <-
-  bind_rows(dc_solar_irradiation,
-  read.csv(path, skip = 2))
-}
+# for(year in 1999:2020) {
+#   path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
+#                year, ".csv")
+#   dc_solar_irradiation <-
+#   bind_rows(dc_solar_irradiation,
+#   read.csv(path, skip = 2))
+# }
+# 
+# 
+# dc_dew_point <- read.csv("./data/csv.noaa.dew/1.csv")
+# for(num in 2:8) {
+#   path <- paste0("./data/csv.noaa.dew/",
+#                num, ".csv")
+#   print(path)
+#   dc_dew_point <-
+#   bind_rows(dc_dew_point,
+#   read.csv(path))
+#   dc_dew_point <- na.exclude(dc_dew_point)
+# }
+# library(data.table)
+# library(dplyr)
+# library(purrr)
+# library(lubridate)
+# files <- c("./data/csv.noaa.dew/1.csv",
+#            "./data/csv.noaa.dew/2.csv",
+#            "./data/csv.noaa.dew/3.csv",
+#            "./data/csv.noaa.dew/4.csv",
+#            "./data/csv.noaa.dew/5.csv",
+#            "./data/csv.noaa.dew/6.csv",
+#            "./data/csv.noaa.dew/7.csv",
+#            "./data/csv.noaa.dew/8.csv")
+# 
+# # Identify columns you need
+# myColumns = c("DATE", "DailyAverageDewPointTemperature")
+# 
+# 
+# fread_allfiles <- function(file, columns){
+#   x <- fread(file, select = columns) %>% 
+#     dplyr::select(everything())   # 
+#   return(x)
+# }
+# 
+# df_all <- files %>% 
+#   map_df(~ fread_allfiles(.,myColumns))
+# df_all <- na.exclude(df_all)
+# 
+# df_all <- df_all %>%
+#   mutate(year = lubridate::year(df_all$DATE),
+#          month = lubridate::month(df_all$DATE))
+# # 2011 - 2012, 1993 - 1992, 1972 - 1973, 1962-1963, 1953 - 1952
+# df_all <- df_all %>%
+#    filter(month < 4 & month >= 1) %>%
+#    group_by(year) %>%
+#    summarise(avg_dew = mean(avg_dew))
+# 
+# # df_all <- rename(df_all, avg_dew = DailyAverageDewPointTemperature)
+# df <- list.files(path="./data/csv.noaa.dew/", full.names = T) %>%
+#   lapply(read_csv, col_types = "character") %>% 
+#   bind_rows
 
-dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
-dc_solar_mean <- dc_solar_irradiation %>%
-   filter(Month < 4) %>%
-   group_by(Year) %>%
-   summarise(avg_ghi = mean(GHI),
-             avg_dni = mean(DNI),
-             avg_dhi = mean(DHI),
-             avg_clearsky = mean(Clearsky.GHI),
-             avg_dew = mean(Dew.Point),
-             avg_albedo = mean(Surface.Albedo),
-             avg_windspeed = mean(Wind.Speed),
-             avg_humidity = mean(Relative.Humidity),
-             avg_temp = mean(Temperature),
-             avg_pressure = mean(Pressure)
-             )
+# dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
+# dc_solar_mean <- dc_solar_irradiation %>%
+#    filter(Month < 4) %>%
+#    group_by(Year) %>%
+#    summarise(avg_ghi = mean(GHI),
+#              avg_dni = mean(DNI),
+#              avg_dhi = mean(DHI),
+#              avg_clearsky = mean(Clearsky.GHI),
+#              avg_dew = mean(Dew.Point),
+#              avg_albedo = mean(Surface.Albedo),
+#              avg_windspeed = mean(Wind.Speed),
+#              avg_humidity = mean(Relative.Humidity),
+#              avg_temp = mean(Temperature),
+#              avg_pressure = mean(Pressure)
+# )
 # dc_solar_mean <- rename(dc_solar_mean, year = Year)
-dc_big_bloom_day <-  cherry %>%
-  select(year, bloom_doy) %>%
-  right_join(dc_big, by = "year") %>%
-  right_join(dc_solar_mean, by="year")
+# dc_big_bloom_day <- cherry %>%
+#   select(year, bloom_doy) %>%
+#   left_join(dc_big, by = "year")
+# 
+# dc_big_bloom_dey <- dc_big %>%
+#   left_join(cherry, by = "year")
 ```
 
-Lasso Regression
+Lasso Regression and Stepwise
 ```{r}
 library(glmnet)
-index <- sample(1:nrow(dc_big_bloom_day), 0.7*nrow(dc_big_bloom_day))
-#define response variable
-train <- dc_big_bloom_day[index, ]
-test <- dc_big_bloom_day[-index, ]
-train.x <- data.matrix(train[, -2])
-train.y <- data.matrix(train$bloom_doy)
-test.x <- data.matrix(test[, -2])
-test.y <- data.matrix(test$bloom_doy)
-# Ridge Regression
-lambdas <- 10^seq(2, -3, by = -.1)
-ridge_reg <- glmnet(train.x, train.y, nlambda = 25, alpha = 0, family = 'gaussian', lambda = lambdas)
-cv_ridge <- cv.glmnet(train.x, train.y, alpha = 0, lambda = lambdas)
-optimal_lambda <- cv_ridge$lambda.min
-
-# Compute R^2 from true and predicted values
-eval_results <- function(true, predicted, df) {
-  SSE <- sum((predicted - true)^2)
-  SST <- sum((true - mean(true))^2)
-  R_square <- 1 - SSE / SST
-  RMSE = sqrt(SSE/nrow(df))
-
-  
-    # Model performance metrics
-  data.frame(
-    RMSE = RMSE,
-    Rsquare = R_square
-  )
-  
-}
-
-
-# Prediction and evaluation on train data
-predictions_train <- predict(ridge_reg, s = optimal_lambda, newx = train.x)
-eval_results(train.y, predictions_train, train.x)
-
-# Prediction and evaluation on test data
-predictions_test <- predict(ridge_reg, s = optimal_lambda, newx = test.x)
-eval_results(test.y, predictions_test, test.x)
-
+library(MASS)
+library(leaps)
+library(caret)
 
 
 # ---------------LASSO-----------------------------------
-y <- data.matrix(dc_big_bloom_day$bloom_doy)
+y <- data.matrix(dc_seasonal_weather$bloom_doy)
 
 #define matrix of predictor variables
-x <- data.matrix(dc_big_bloom_day[, -2])
+x <- data.matrix(dc_seasonal_weather[, -2])
 
 
 #perform k-fold cross-validation to find optimal lambda value
@@ -408,35 +479,41 @@ best_lambda
 
 best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
 coef(best_model)
-#use fitted best model to make predictions
-# y_predicted <- predict(best_model, s = best_lambda, newx = x)
 
-#find SST and SSE
-# sst <- sum((y - mean(y))^2)
-# sse <- sum((y_predicted - y)^2)
 
-#find R-Squared
-# rsq <- 1 - sse/sst
-# rsq
-# Create a linear regression model from the lasso results
-# Prediction and evaluation on train data
-# predictions_train <- predict(best_model, s = best_lambda, newx = train.x)
-# eval_results(train.y, predictions_train, train.x)
+dc_big_bloom_dey$location <- NULL
+dc_big_bloom_dey$bloom_date <- NULL
+big_model_dc <- lm(bloom_doy ~ tmax_Winter + tmax_Spring + 
+                     snow_Spring + tobs_Summer + tobs_Fall + 
+                     dapr_Spring + mdpr_Spring + wt04_Spring + 
+                     wt01_Winter + wt01_Spring + wt03_Fall + 
+                     wt03_Spring
+                     ,data= dc_seasonal_weather)
 
-# Prediction and evaluation on test data
-# predictions_test <- predict(best_model, s = best_lambda, newx = test.x)
-# eval_results(test.y, predictions_test, test.x)
-big_model_dc <- lm(bloom_doy ~ wt11 + avg_dew + avg_clearsky + avg_dni,data = dc_big_bloom_day)
+train.control <- trainControl(method = "cv", number = 10)
+step.model <- train(bloom_doy ~ . -year, data = dc_seasonal_weather,
+                    method = "lmStepAIC", 
+                    trControl = train.control,
+                    trace = FALSE
+)
+# Model accuracy
+step.model$results
+# Final model coefficients
+step.model$finalModel
+# Summary of the model
+summary(step.model$finalModel)
+# Train the model
 ```
 
+RandomForest for fun :)
 ```{r}
 library(randomForest)
 library(ROCR)
-sample <- sample(1:nrow(dc_big_bloom_day), 0.7 * nrow(dc_big_bloom_day))
-train.x <- dc_big_bloom_day[sample, -2]
-train.y <- dc_big_bloom_day[sample, 2]
-test.x <- dc_big_bloom_day[-sample, -2]
-test.y <- dc_big_bloom_day[-sample, 2]
+sample <- sample(1:nrow(dc_seasonal_weather), 0.7 * nrow(dc_seasonal_weather))
+train.x <- dc_seasonal_weather[sample, -2]
+train.y <- dc_seasonal_weather[sample, 2]
+test.x <- dc_seasonal_weather[-sample, -2]
+test.y <- dc_seasonal_weather[-sample, 2]
 
 rf <- randomForest::randomForest(train.x, train.y,
                                  test.x, test.y,
@@ -453,7 +530,7 @@ tibble::tibble(
   `Out of Bag Error` = oob,
   `Test error` = validation,
   ntrees = 1:rf$ntree
-) %>%
+) %>% 
   gather(Metric, RMSE, -ntrees) %>%
   ggplot(aes(ntrees, RMSE, color = Metric)) +
   geom_line() +
@@ -478,8 +555,8 @@ hyper_grid <- expand.grid(
 )
 
 library(ranger)
-features <- setdiff(names(train.x), "Sale_Price")
-train <- dc_big_bloom_day[sample, ]
+library(broom)
+train <- dc_seasonal_weather[sample, ]
 for(i in 1:nrow(hyper_grid)) {
   
   # train model

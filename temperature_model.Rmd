@@ -587,5 +587,68 @@ model$variable.importance %>%
   geom_col() +
   coord_flip() +
   ggtitle("Top 10 important variables")
+
+
 ```
 
+Jon's code ramblings
+```{r}
+
+
+trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather)
+
+lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
+
+cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
+
+summary(trees_lm)
+
+summary(lasso_lm)
+
+summary(cutdown_lasso_lm)
+
+
+cherry_pre1948 <- subset(cherry, year >= 1948)
+
+just_year <- lm(bloom_doy ~ year+lat+long, data = subset(cherry_pre1948, location == "washingtondc"))
+
+summary(just_year)
+
+swiss <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "liestal"))
+japan <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "kyoto"))
+usa <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "washingtondc"))
+
+summary(usa)
+summary(swiss)
+summary(japan)
+
+
+ggplot(data = cherry_pre1948, aes(year,bloom_doy, color = location)) + geom_point() + geom_smooth(method = "lm")
+
+
+dc_seasonal_weather_1980s <- subset(dc_seasonal_weather, year >= 1980)
+
+ggplot(data = dc_seasonal_weather_1980s, aes(year,wt03_Winter)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,wt03_Summer)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,mdpr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,dapr_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,dapr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,tobs_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,prcp_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,tmax_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,tmin_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather_1980s, aes(year,tmin_Summer)) + geom_point() + geom_smooth(method = "lm")
+
+trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather_1980s)
+
+summary(trees_lm)
+
+lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
+
+cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
+
+summary(lasso_lm)
+
+summary(cutdown_lasso_lm)
+
+```

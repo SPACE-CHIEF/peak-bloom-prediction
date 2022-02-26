@@ -628,16 +628,16 @@ ggplot(data = cherry_pre1948, aes(year,bloom_doy, color = location)) + geom_poin
 
 dc_seasonal_weather_1980s <- subset(dc_seasonal_weather, year >= 1980)
 
-ggplot(data = dc_seasonal_weather_1980s, aes(year,wt03_Winter)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,wt03_Summer)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,mdpr_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,dapr_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,dapr_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,tobs_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,prcp_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,tmax_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,tmin_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather_1980s, aes(year,tmin_Summer)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,wt03_Winter)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,wt03_Summer)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,mdpr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,dapr_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,dapr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather, aes(year,tobs_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,prcp_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmax_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmin_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmin_Summer)) + geom_point() + geom_smooth(method = "lm")
 
 trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather_1980s)
 
@@ -650,5 +650,148 @@ cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring
 summary(lasso_lm)
 
 summary(cutdown_lasso_lm)
+
+```
+
+New Genny
+```{r}
+dc <- ghcnd_stations(id = "USC00186350")
+dc_sub <- subset(dc, id == "USC00186350")
+
+dc_sub
+
+dc %>%
+  filter(id == "USC00186350")
+
+
+dc_meteo_month <- ghcnd(stationid = "USC00186350", refresh = T)
+
+
+dc_meteo_day <- ghcnd_search(stationid = "USC00186350", refresh = T)
+
+dc_meteo_day[["tmax"]] %>%
+  left_join(dc_meteo_day[["tmin"]]) %>%
+  left_join(dc_meteo_day[["prcp"]]) %>%
+  left_join(dc_meteo_day[["snow"]]) %>%
+  left_join(dc_meteo_day[["snwd"]]) %>%
+  left_join(dc_meteo_day[["tobs"]]) %>%
+  left_join(dc_meteo_day[["dapr"]]) %>%
+  left_join(dc_meteo_day[["mdpr"]]) %>%
+  left_join(dc_meteo_day[["wt04"]]) %>%
+  left_join(dc_meteo_day[["wt05"]]) %>%
+  left_join(dc_meteo_day[["wt01"]]) %>%
+  left_join(dc_meteo_day[["wt03"]]) %>%
+  left_join(dc_meteo_day[["wt11"]]) %>%  
+  left_join(dc_meteo_day[["dasf"]]) %>%             
+  left_join(dc_meteo_day[["mdsf"]]) %>%  
+  left_join(dc_meteo_day[["wesd"]])
+
+
+dc_meteo_all <- dc_meteo_day %>%
+  reduce(full_join, by = c("date", "id", "qflag", "sflag", "mflag"))
+
+dc_meteo_all_subset <- dc_meteo_all[c(-4,-5,-6)]
+
+
+
+dc_something <- dc_meteo_all_subset %>%
+  mutate(year = lubridate::year(dc_meteo_all_subset$date))
+
+dc_something <- 
+  dc_something %>%
+  mutate(year = as.integer(format(date, "%Y")),
+         month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
+         season = cut(month, breaks = c(0, 2, 5, 8, 11),
+                      include.lowest = TRUE,
+                      labels = c("Winter", "Spring", "Summer", "Fall")),
+         year = if_else(month == 0, year + 1L, year)) %>%
+  group_by(year, season) %>%
+  summarize(tmin = mean(tmin, na.rm = T),
+            tmax = mean(tmax, na.rm = T),
+            prcp = mean(prcp, na.rm = T),
+            snow = mean(snow, na.rm = T),
+            snwd = mean(snwd, na.rm = T),
+            tobs = mean(tobs, na.rm = T),
+            dapr = mean(dapr, na.rm = T),
+            mdpr = mean(mdpr, na.rm = T),
+            wt04 = mean(wt04, na.rm = T),
+            wt05 = mean(wt05, na.rm = T),
+            wt01 = mean(wt01, na.rm = T),
+            wt03 = mean(wt03, na.rm = T),
+            wt11 = mean(wt11, na.rm = T),
+            dasf = mean(dasf, na.rm = T),
+            mdsf = mean(mdsf, na.rm = T),
+            wt06 = mean(wt06, na.rm = T),
+            wesd = mean(wesd, na.rm = T))
+
+dc_something$dapr[is.nan(dc_something$dapr)]<-0
+dc_something$mdpr[is.nan(dc_something$mdpr)]<-0
+dc_something$wt04[is.nan(dc_something$wt04)]<-0
+dc_something$wt05[is.nan(dc_something$wt05)]<-0
+dc_something$wt01[is.nan(dc_something$wt01)]<-0
+dc_something$wt03[is.nan(dc_something$wt03)]<-0
+dc_something$wt11[is.nan(dc_something$wt11)]<-0
+dc_something$dasf[is.nan(dc_something$dasf)]<-0
+dc_something$mdsf[is.nan(dc_something$mdsf)]<-0
+dc_something$wesd[is.nan(dc_something$wesd)]<-0
+dc_something$wesdf <- NULL
+dc_something$wt06[is.nan(dc_something$wt06)]<-0
+
+dc_seasonal_weather <- dc_something %>%
+  pivot_wider(names_from = season, values_from = c(
+    tmin, tmax, prcp, snow, snwd, tobs, dapr,
+    mdpr, wt04, wt05, wt01, wt03, wt11, dasf,
+    mdsf, wt06, wesd
+  )) %>%
+  na.omit()
+
+dc_seasonal_weather <- cherry %>%
+  dplyr::select(year, bloom_doy) %>%
+  right_join(dc_seasonal_weather, by = "year")
+
+
+dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+
+for(year in 1999:2020) {
+  path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
+               year, ".csv")
+  dc_solar_irradiation <-
+  bind_rows(dc_solar_irradiation,
+  read.csv(path, skip = 2))
+}
+
+
+
+ library(data.table)
+ library(dplyr)
+ library(purrr)
+ library(lubridate)
+ 
+
+ dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
+ dc_solar_mean <- dc_solar_irradiation %>%
+    filter(Month < 4) %>%
+    group_by(Year) %>%
+    summarise(avg_ghi = mean(GHI),
+              avg_dni = mean(DNI),
+              avg_dhi = mean(DHI),
+              avg_clearsky = mean(Clearsky.GHI),
+           avg_dew = mean(Dew.Point),
+             avg_albedo = mean(Surface.Albedo),
+              avg_windspeed = mean(Wind.Speed),
+             avg_humidity = mean(Relative.Humidity),
+             avg_temp = mean(Temperature),
+             avg_pressure = mean(Pressure)
+)
+ dc_solar_mean <- rename(dc_solar_mean, year = Year)
+ 
+ 
+ 
+ dc_seasonal_weather_1980s_solar <- left_join(dc_seasonal_weather_1980s,dc_solar_mean, by = "year")
+ 
+dc_seasonal_90s <- subset(dc_seasonal_weather_1980s_solar, year >= 1999)
+
+
+dc_90s_m1 <- randomForest(formula = bloom_doy ~., data = dc_seasonal_90s)
 
 ```

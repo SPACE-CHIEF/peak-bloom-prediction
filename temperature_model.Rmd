@@ -15,9 +15,9 @@ library(tidyverse)
 
 Read cherry blossom data.
 ```{r}
-cherry <- read.csv("data/washingtondc.csv") %>% 
-  bind_rows(read.csv("data/liestal.csv")) %>% 
-  bind_rows(read.csv("data/kyoto.csv"))
+cherry <- read.csv("data/vancouver.csv") %>% 
+  bind_rows(read.csv("data/vancouver.csv")) %>% 
+  bind_rows(read.csv("data/vancouver.csv"))
 ```
 
 
@@ -58,16 +58,16 @@ get_temperature <- function (stationid) {
 
 historic_temperatures_tmax <-
   tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
-  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
-  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("JA000047759"))) %>%
   bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
 
 # get_temperature() replace tmax in var = c("tmax")
 # to tmin
 historic_temperatures_tmin <-
   tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
-  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
-  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("JA000047759"))) %>%
   bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
 
 # get_temperature() replace tmax in var = c("tmax")
@@ -80,8 +80,8 @@ historic_temperatures_tavg <-
 # to tavg
 historic_prcp <-
   tibble(location = "washingtondc", get_temperature("USC00186350")) %>%
-  bind_rows(tibble(location = "liestal", get_temperature("GME00127786"))) %>%
-  bind_rows(tibble(location = "kyoto", get_temperature("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("GME00127786"))) %>%
+  bind_rows(tibble(location = "vancouver", get_temperature("JA000047759"))) %>%
   bind_rows(tibble(location = "vancouver", get_temperature("CA001108395")))
 ```
 
@@ -162,8 +162,8 @@ get_all_variables <- function (stationid) {
 all_data <- get_all_variables("USC00186350")
 historic_weather <-
   tibble(location = "washingtondc", get_all_variables("USC00186350")) %>%
-  bind_rows(tibble(location = "liestal", get_all_variables("GME00127786"))) %>%
-  bind_rows(tibble(location = "kyoto", get_all_variables("JA000047759"))) %>%
+  bind_rows(tibble(location = "vancouver", get_all_variables("GME00127786"))) %>%
+  bind_rows(tibble(location = "vancouver", get_all_variables("JA000047759"))) %>%
   bind_rows(tibble(location = "vancouver", get_all_variables("CA001108395")))
 
 t2 <- all_data %>%
@@ -188,52 +188,34 @@ model2 <- lm(data = t2,
              formula = difference ~ date + prcp + snwd + season)
 ```
 
+
 ```{r}
 library(rnoaa)
-dc <- ghcnd_stations(id = "USC00186350")
-dc_sub <- subset(dc, id == "USC00186350")
-
-dc_sub
-
-dc %>%
-  filter(id == "USC00186350")
 
 
-dc_meteo_month <- ghcnd(stationid = "USC00186350", refresh = T)
+
+vancouver <- ghcnd_stations(id = "CA001108395")
+vancouver_sub <- subset(vancouver, id == "CA001108395")
 
 
-dc_meteo_day <- ghcnd_search(stationid = "USC00186350", refresh = T)
-
-dc_meteo_day[["tmax"]] %>%
-  left_join(dc_meteo_day[["tmin"]]) %>%
-  left_join(dc_meteo_day[["prcp"]]) %>%
-  left_join(dc_meteo_day[["snow"]]) %>%
-  left_join(dc_meteo_day[["snwd"]]) %>%
-  left_join(dc_meteo_day[["tobs"]]) %>%
-  left_join(dc_meteo_day[["dapr"]]) %>%
-  left_join(dc_meteo_day[["mdpr"]]) %>%
-  left_join(dc_meteo_day[["wt04"]]) %>%
-  left_join(dc_meteo_day[["wt05"]]) %>%
-  left_join(dc_meteo_day[["wt01"]]) %>%
-  left_join(dc_meteo_day[["wt03"]]) %>%
-  left_join(dc_meteo_day[["wt11"]]) %>%  
-  left_join(dc_meteo_day[["dasf"]]) %>%             
-  left_join(dc_meteo_day[["mdsf"]]) %>%  
-  left_join(dc_meteo_day[["wesd"]])
+vancouver_meteo_month <- ghcnd(stationid = "CA001108395", refresh = T)
 
 
-dc_meteo_all <- dc_meteo_day %>%
+vancouver_meteo_day <- ghcnd_search(stationid = "CA001108395", refresh = T)
+
+
+vancouver_meteo_all <- vancouver_meteo_day %>%
   reduce(full_join, by = c("date", "id", "qflag", "sflag", "mflag"))
 
-dc_meteo_all_subset <- dc_meteo_all[c(-4,-5,-6)]
+vancouver_meteo_all_subset <- vancouver_meteo_all[c(-4,-5,-6)]
 
 
 
-dc_something <- dc_meteo_all_subset %>%
-  mutate(year = lubridate::year(dc_meteo_all_subset$date))
+vancouver_something <- vancouver_meteo_all_subset %>%
+  mutate(year = lubridate::year(vancouver_meteo_all_subset$date))
 
-dc_something <- 
-  dc_something %>%
+vancouver_something <- 
+  vancouver_something %>%
   mutate(year = as.integer(format(date, "%Y")),
          month = as.integer(strftime(date, '%m')) %% 12, # make December "0"
          season = cut(month, breaks = c(0, 2, 5, 8, 11),
@@ -243,216 +225,68 @@ dc_something <-
   group_by(year, season) %>%
   summarize(tmin = mean(tmin, na.rm = T),
             tmax = mean(tmax, na.rm = T),
+            avg_temp = mean(tavg, na.rm = T),
             prcp = mean(prcp, na.rm = T),
-            snow = mean(snow, na.rm = T),
             snwd = mean(snwd, na.rm = T),
-            tobs = mean(tobs, na.rm = T),
-            dapr = mean(dapr, na.rm = T),
-            mdpr = mean(mdpr, na.rm = T),
-            wt04 = mean(wt04, na.rm = T),
-            wt05 = mean(wt05, na.rm = T),
-            wt01 = mean(wt01, na.rm = T),
-            wt03 = mean(wt03, na.rm = T),
-            wt11 = mean(wt11, na.rm = T),
-            dasf = mean(dasf, na.rm = T),
-            mdsf = mean(mdsf, na.rm = T),
-            wt06 = mean(wt06, na.rm = T),
-            wesd = mean(wesd, na.rm = T))
+            snow = mean(snow, na.rm = T))
 
-dc_something$dapr[is.nan(dc_something$dapr)]<-0
-dc_something$mdpr[is.nan(dc_something$mdpr)]<-0
-dc_something$wt04[is.nan(dc_something$wt04)]<-0
-dc_something$wt05[is.nan(dc_something$wt05)]<-0
-dc_something$wt01[is.nan(dc_something$wt01)]<-0
-dc_something$wt03[is.nan(dc_something$wt03)]<-0
-dc_something$wt11[is.nan(dc_something$wt11)]<-0
-dc_something$dasf[is.nan(dc_something$dasf)]<-0
-dc_something$mdsf[is.nan(dc_something$mdsf)]<-0
-dc_something$wesd[is.nan(dc_something$wesd)]<-0
-dc_something$wesdf <- NULL
-dc_something$wt06[is.nan(dc_something$wt06)]<-0
+vancouver_something$dapr[is.nan(vancouver_something$dapr)]<-0
+vancouver_something$mdpr[is.nan(vancouver_something$mdpr)]<-0
+vancouver_something$wt04[is.nan(vancouver_something$wt04)]<-0
+vancouver_something$wt05[is.nan(vancouver_something$wt05)]<-0
+vancouver_something$wt01[is.nan(vancouver_something$wt01)]<-0
+vancouver_something$wt03[is.nan(vancouver_something$wt03)]<-0
+vancouver_something$wt11[is.nan(vancouver_something$wt11)]<-0
+vancouver_something$dasf[is.nan(vancouver_something$dasf)]<-0
+vancouver_something$mdsf[is.nan(vancouver_something$mdsf)]<-0
+vancouver_something$wesd[is.nan(vancouver_something$wesd)]<-0
+vancouver_something$wesdf <- NULL
+vancouver_something$wt06[is.nan(vancouver_something$wt06)]<-0
 
-dc_seasonal_weather <- dc_something %>%
+vancouver_seasonal_weather <- vancouver_something %>%
   pivot_wider(names_from = season, values_from = c(
-    tmin, tmax, prcp, snow, snwd, tobs, dapr,
-    mdpr, wt04, wt05, wt01, wt03, wt11, dasf,
-    mdsf, wt06, wesd
+    tmin, prcp, snwd, tmax, avg_temp, snow
   )) %>%
   na.omit()
 
-dc_seasonal_weather <- cherry %>%
+vancouver_seasonal_weather <- cherry %>%
   dplyr::select(year, bloom_doy) %>%
-  right_join(dc_seasonal_weather, by = "year")
+  right_join(vancouver_seasonal_weather, by = "year")
+vancouver_seasonal_weather <- vancouver_seasonal_weather %>%
+  filter(year >= 1999)
 
-# -----------------------OLD-----------------------
-# dc_tmin <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(min = mean(tmin, na.rm = T))
-# dc_tmax <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(max = mean(tmax, na.rm = T))
-# dc_prcp <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(prcp = mean(prcp, na.rm = T))
-# dc_snow <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(snow = mean(snow, na.rm = T))
-# dc_snwd <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(snwd = mean(snwd, na.rm = T))
-# dc_tobs <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(tobs = mean(tobs, na.rm = T))
-# dc_dapr <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(dapr = mean(dapr, na.rm = T))
-# dc_mdpr <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(mdpr = mean(mdpr, na.rm = T))
-# dc_wt04 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt04 = mean(wt04, na.rm = T))
-# dc_wt05 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt05 = mean(wt05, na.rm = T))
-# dc_wt01 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt01 = mean(wt01, na.rm = T))
-# dc_wt03 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt03 = mean(wt03, na.rm = T))
-# dc_wt11 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt11 = mean(wt11, na.rm = T))
-# dc_dasf <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(dasf = mean(dasf, na.rm = T))
-# dc_mdsf <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(mdsf = mean(mdsf, na.rm = T))
-# dc_wt06 <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wt06 = mean(wt06, na.rm = T))
-# dc_wesd <- dc_something %>%
-#   group_by(year) %>%
-#   summarise(wesd = mean(wesd, na.rm = T))
-# 
-# dc_big <- dc_tmin %>%
-#   left_join(dc_prcp) %>%
-#   left_join(dc_tmax) %>%
-#   left_join(dc_snow) %>%
-#   left_join(dc_snwd) %>%
-#   left_join(dc_tobs) %>%
-#   left_join(dc_dapr) %>%
-#   left_join(dc_mdpr) %>%
-#   left_join(dc_wt04) %>%
-#   left_join(dc_wt05) %>%
-#   left_join(dc_wt01) %>%
-#   left_join(dc_wt03) %>%
-#   left_join(dc_wt11) %>%
-#   left_join(dc_dasf) %>%
-#   left_join(dc_mdsf) %>%
-#   left_join(dc_wt06) %>%
-#   left_join(dc_wesd)
-# 
-# dc_big$dapr[is.nan(dc_big$dapr)]<-0
-# dc_big$mdpr[is.nan(dc_big$mdpr)]<-0
-# dc_big$wt04[is.nan(dc_big$wt04)]<-0
-# dc_big$wt05[is.nan(dc_big$wt05)]<-0
-# dc_big$wt01[is.nan(dc_big$wt01)]<-0
-# dc_big$wt03[is.nan(dc_big$wt03)]<-0
-# dc_big$wt11[is.nan(dc_big$wt11)]<-0
-# dc_big$dasf[is.nan(dc_big$dasf)]<-0
-# dc_big$mdsf[is.nan(dc_big$mdsf)]<-0
-# dc_big$wesd[is.nan(dc_big$wesd)]<-0
-# dc_big$wesdf <- NULL
-# dc_big$wt06[is.nan(dc_big$wt06)]<-0
-# 
-# 
-# dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+vancouver_seasonal_weather <- dc_seasonal_90s %>%
+  filter(year >= 2011) %>%
+  select(year, bloom_doy, tmin_Fall, tmin_Winter, tmin_Spring, tmin_Summer, prcp_Fall, prcp_Winter, prcp_Spring, prcp_Summer, snwd_Fall, snwd_Winter, 
+         snwd_Spring, snwd_Summer, tmax_Spring) %>%
+  bind_rows(vancouver_seasonal_weather)
+vancouver_seasonal_weather <-vancouver_seasonal_weather[order(-vancouver_seasonal_weather$year),]
+vancouver_seasonal_weather <- vancouver_seasonal_weather[-c(24, 7, 14, 17, 4),]
 
-# for(year in 1999:2020) {
-#   path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
-#                year, ".csv")
-#   dc_solar_irradiation <-
-#   bind_rows(dc_solar_irradiation,
-#   read.csv(path, skip = 2))
-# }
-# 
-# 
-# dc_dew_point <- read.csv("./data/csv.noaa.dew/1.csv")
-# for(num in 2:8) {
-#   path <- paste0("./data/csv.noaa.dew/",
-#                num, ".csv")
-#   print(path)
-#   dc_dew_point <-
-#   bind_rows(dc_dew_point,
-#   read.csv(path))
-#   dc_dew_point <- na.exclude(dc_dew_point)
-# }
-# library(data.table)
-# library(dplyr)
-# library(purrr)
-# library(lubridate)
-# files <- c("./data/csv.noaa.dew/1.csv",
-#            "./data/csv.noaa.dew/2.csv",
-#            "./data/csv.noaa.dew/3.csv",
-#            "./data/csv.noaa.dew/4.csv",
-#            "./data/csv.noaa.dew/5.csv",
-#            "./data/csv.noaa.dew/6.csv",
-#            "./data/csv.noaa.dew/7.csv",
-#            "./data/csv.noaa.dew/8.csv")
-# 
-# # Identify columns you need
-# myColumns = c("DATE", "DailyAverageDewPointTemperature")
-# 
-# 
-# fread_allfiles <- function(file, columns){
-#   x <- fread(file, select = columns) %>% 
-#     dplyr::select(everything())   # 
-#   return(x)
-# }
-# 
-# df_all <- files %>% 
-#   map_df(~ fread_allfiles(.,myColumns))
-# df_all <- na.exclude(df_all)
-# 
-# df_all <- df_all %>%
-#   mutate(year = lubridate::year(df_all$DATE),
-#          month = lubridate::month(df_all$DATE))
-# # 2011 - 2012, 1993 - 1992, 1972 - 1973, 1962-1963, 1953 - 1952
-# df_all <- df_all %>%
-#    filter(month < 4 & month >= 1) %>%
-#    group_by(year) %>%
-#    summarise(avg_dew = mean(avg_dew))
-# 
-# # df_all <- rename(df_all, avg_dew = DailyAverageDewPointTemperature)
-# df <- list.files(path="./data/csv.noaa.dew/", full.names = T) %>%
-#   lapply(read_csv, col_types = "character") %>% 
-#   bind_rows
+vancouver_seasonal_weather$snow_Fall<- NULL
+vancouver_seasonal_weather$snow_Winter <- dc_seasonal_90s$snow_Winter
+vancouver_seasonal_weather$snow_Summer <- dc_seasonal_90s$snow_Summer
+vancouver_seasonal_weather$snow_Fall <- dc_seasonal_90s$snow_Fall
+vancouver_seasonal_weather$snwd_Spring <- dc_seasonal_90s$snwd_Spring
+vancouver_seasonal_weather$snwd_Fall <- dc_seasonal_90s$snwd_Fall
+vancouver_seasonal_weather$snwd_Winter <- dc_seasonal_90s$snwd_Winter
+vancouver_seasonal_weather$snwd_Summer <- dc_seasonal_90s$snwd_Summer
+vancouver_seasonal_weather$snow_Spring <- dc_seasonal_90s$snow_Spring
+vancouver_seasonal_weather$tobs_Spring <- dc_seasonal_90s$tobs_Spring
+vancouver_seasonal_weather$dapr_Summer <- dc_seasonal_90s$dapr_Summer
+vancouver_seasonal_weather$mdpr_Fall <- dc_seasonal_90s$mdpr_Fall
+vancouver_seasonal_weather$mdpr_Spring <- dc_seasonal_90s$mdpr_Spring
+vancouver_seasonal_weather$mdsf_Winter <- dc_seasonal_90s$mdsf_Winter
+vancouver_seasonal_weather$avg_clearsky <- dc_seasonal_90s$avg_clearsky
+vancouver_seasonal_weather$avg_albedo <- dc_seasonal_90s$avg_albedo
+vancouver_seasonal_weather$avg_temp <- dc_seasonal_90s$avg_temp
 
-# dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
-# dc_solar_mean <- dc_solar_irradiation %>%
-#    filter(Month < 4) %>%
-#    group_by(Year) %>%
-#    summarise(avg_ghi = mean(GHI),
-#              avg_dni = mean(DNI),
-#              avg_dhi = mean(DHI),
-#              avg_clearsky = mean(Clearsky.GHI),
-#              avg_dew = mean(Dew.Point),
-#              avg_albedo = mean(Surface.Albedo),
-#              avg_windspeed = mean(Wind.Speed),
-#              avg_humidity = mean(Relative.Humidity),
-#              avg_temp = mean(Temperature),
-#              avg_pressure = mean(Pressure)
-# )
-# dc_solar_mean <- rename(dc_solar_mean, year = Year)
-# dc_big_bloom_day <- cherry %>%
-#   select(year, bloom_doy) %>%
-#   left_join(dc_big, by = "year")
-# 
-# dc_big_bloom_dey <- dc_big %>%
-#   left_join(cherry, by = "year")
+vancouver_seasonal_weather <- vancouver_seasonal_weather %>%
+  select(tmin_Summer, tmin_Spring, tmax_Spring, prcp_Spring, snow_Spring, snwd_Winter, tobs_Spring, dapr_Summer, mdpr_Fall, mdpr_Spring, mdsf_Winter, avg_clearsky, avg_albedo, avg_temp)
+
+vancouver_seasonal_weather <- as.data.frame(vancouver_seasonal_weather)
+write.csv(submission_predictions, file = "cherry-predictions.csv",
+          row.names = FALSE)
 ```
 
 Lasso Regression and Stepwise
@@ -591,100 +425,23 @@ model$variable.importance %>%
 
 ```
 
-Jon's code ramblings
 ```{r}
+library(data.table)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(randomForest)
+library(glmnet)
+library(leaps)
 
 
-trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather)
-
-lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
-
-cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
-
-summary(trees_lm)
-
-summary(lasso_lm)
-
-summary(cutdown_lasso_lm)
-
-
-cherry_pre1948 <- subset(cherry, year >= 1948)
-
-just_year <- lm(bloom_doy ~ year+lat+long, data = subset(cherry_pre1948, location == "washingtondc"))
-
-summary(just_year)
-
-swiss <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "liestal"))
-japan <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "kyoto"))
-usa <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "washingtondc"))
-
-summary(usa)
-summary(swiss)
-summary(japan)
-
-
-ggplot(data = cherry_pre1948, aes(year,bloom_doy, color = location)) + geom_point() + geom_smooth(method = "lm")
-
-
-dc_seasonal_weather_1980s <- subset(dc_seasonal_weather, year >= 1980)
-
-ggplot(data = dc_seasonal_90s, aes(year,wt03_Winter)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,wt03_Summer)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,mdpr_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,dapr_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,dapr_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_weather, aes(year,tobs_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,prcp_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,tmax_Spring)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,tmin_Fall)) + geom_point() + geom_smooth(method = "lm")
-ggplot(data = dc_seasonal_90s, aes(year,tmin_Summer)) + geom_point() + geom_smooth(method = "lm")
-
-trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather_1980s)
-
-summary(trees_lm)
-
-lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
-
-cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
-
-summary(lasso_lm)
-
-summary(cutdown_lasso_lm)
-
-```
-
-New Genny
-```{r}
 dc <- ghcnd_stations(id = "USC00186350")
 dc_sub <- subset(dc, id == "USC00186350")
-
-dc_sub
-
-dc %>%
-  filter(id == "USC00186350")
-
 
 dc_meteo_month <- ghcnd(stationid = "USC00186350", refresh = T)
 
 
 dc_meteo_day <- ghcnd_search(stationid = "USC00186350", refresh = T)
-
-dc_meteo_day[["tmax"]] %>%
-  left_join(dc_meteo_day[["tmin"]]) %>%
-  left_join(dc_meteo_day[["prcp"]]) %>%
-  left_join(dc_meteo_day[["snow"]]) %>%
-  left_join(dc_meteo_day[["snwd"]]) %>%
-  left_join(dc_meteo_day[["tobs"]]) %>%
-  left_join(dc_meteo_day[["dapr"]]) %>%
-  left_join(dc_meteo_day[["mdpr"]]) %>%
-  left_join(dc_meteo_day[["wt04"]]) %>%
-  left_join(dc_meteo_day[["wt05"]]) %>%
-  left_join(dc_meteo_day[["wt01"]]) %>%
-  left_join(dc_meteo_day[["wt03"]]) %>%
-  left_join(dc_meteo_day[["wt11"]]) %>%  
-  left_join(dc_meteo_day[["dasf"]]) %>%             
-  left_join(dc_meteo_day[["mdsf"]]) %>%  
-  left_join(dc_meteo_day[["wesd"]])
 
 
 dc_meteo_all <- dc_meteo_day %>%
@@ -750,7 +507,20 @@ dc_seasonal_weather <- cherry %>%
   right_join(dc_seasonal_weather, by = "year")
 
 
-dc_solar_irradiation <- read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+dc_solar_irradiation <-
+  read.csv("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_1999.csv", skip = 2)
+vancouver_solar_irradiation <- 
+  read.csv("./data/vancouver-Solar-Irradiance/549643_47.49_7.70_2017.csv", skip = 2)
+
+vancouver_solar_irradiation <-
+  read.csv("./data/vancouver-Solar-Irradiance/1706731_35.01_135.74_tdy-2020.csv", skip = 2)
+
+for(year in 2018:2019){
+  path <-  paste0("./data/vancouver-Solar-Irradiance/549643_47.49_7.70_",
+               year, ".csv")
+  vancouver_solar_irradiation <- bind_rows(vancouver_solar_irradiation,
+                                         read.csv(path, skip = 2))
+}
 
 for(year in 1999:2020) {
   path <- paste0("./data/DC-Solar-Irradiance/1144937_38.89_-77.02_",
@@ -760,38 +530,153 @@ for(year in 1999:2020) {
   read.csv(path, skip = 2))
 }
 
+vancouver_solar_irradiation <-
+  vancouver_solar_irradiation[1:(length(vancouver_solar_irradiation) - 1)]
+
+dc_solar_irradiation <-
+  dc_solar_irradiation[1:(length(dc_solar_irradiation) - 1)]
+dc_solar_mean <- dc_solar_irradiation %>%
+  filter(Month < 4) %>%
+  group_by(Year) %>%
+  summarise(
+    avg_ghi = mean(GHI),
+    avg_dni = mean(DNI),
+    avg_dhi = mean(DHI),
+    avg_clearsky = mean(Clearsky.GHI),
+    avg_dew = mean(Dew.Point),
+    avg_albedo = mean(Surface.Albedo),
+    avg_windspeed = mean(Wind.Speed),
+    avg_humidity = mean(Relative.Humidity),
+    avg_temp = mean(Temperature),
+    avg_pressure = mean(Pressure)
+  )
+dc_solar_mean <- rename(dc_solar_mean, year = Year)
 
 
- library(data.table)
- library(dplyr)
- library(purrr)
- library(lubridate)
- 
 
- dc_solar_irradiation <- dc_solar_irradiation[1:(length(dc_solar_irradiation)-1)]
- dc_solar_mean <- dc_solar_irradiation %>%
-    filter(Month < 4) %>%
-    group_by(Year) %>%
-    summarise(avg_ghi = mean(GHI),
-              avg_dni = mean(DNI),
-              avg_dhi = mean(DHI),
-              avg_clearsky = mean(Clearsky.GHI),
-           avg_dew = mean(Dew.Point),
-             avg_albedo = mean(Surface.Albedo),
-              avg_windspeed = mean(Wind.Speed),
-             avg_humidity = mean(Relative.Humidity),
-             avg_temp = mean(Temperature),
-             avg_pressure = mean(Pressure)
-)
- dc_solar_mean <- rename(dc_solar_mean, year = Year)
- 
- 
- 
- dc_seasonal_weather_1980s_solar <- left_join(dc_seasonal_weather_1980s,dc_solar_mean, by = "year")
- 
-dc_seasonal_90s <- subset(dc_seasonal_weather_1980s_solar, year >= 1999)
+dc_seasonal_weather_1980s_solar <-
+  left_join(dc_seasonal_weather_1980s, dc_solar_mean, by = "year")
+
+dc_seasonal_90s <-
+  subset(dc_seasonal_weather_1980s_solar, year >= 1999)
+
+dc_seasonal_90s <- na.omit(dc_seasonal_90s)
+
+y <- data.matrix(dc_seasonal_90s$bloom_doy)
+
+# define matrix of predictor variables
+# Do not include Dew Point - confounding variable. 
+# Do not include binary variables, we
+# can't model that with linear regression.
+x <- data.matrix(dc_seasonal_90s[, c(-2, -75,-35:-50)])
 
 
-dc_90s_m1 <- randomForest(formula = bloom_doy ~., data = dc_seasonal_90s)
+#perform k-fold cross-validation to find optimal lambda value
+cv_model <- cv.glmnet(x, y, alpha = 1)
+
+#find optimal lambda value that minimizes test MSE
+best_lambda <- cv_model$lambda.min
+best_lambda
+
+best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(best_model)
+
+
+big_model_dc <- lm(bloom_doy ~ tmin_Summer + tmin_Spring + 
+                   tmax_Spring + prcp_Spring + snow_Spring +
+                   snwd_Winter + tobs_Spring + dapr_Summer + 
+                   mdpr_Fall + mdpr_Spring + mdsf_Winter +
+                   avg_clearsky + avg_albedo + avg_temp,data= dc_seasonal_90s)
+
+year_tminSummer <- lm(tmin_Summer ~ year, data = dc_seasonal_90s)
+
+
+#-----------------------------Time Series Analysis------------------------------
+library(TSA)
+library(tseries)
+library(forecast)
+library(xts)
+lambda <- BoxCox.lambda(vancouver$bloom_doy)
+bloom_transformed <- BoxCox(vancouver$bloom_doy, lambda)
+vancouver.bloom.train <- cherry %>%
+  filter(location == "vancouver" & year < 2001)
+vancouver.bloom.test <- cherry %>%
+  filter(location == "vancouver" & year >= 2001)
+# Does not differ
+plot.zoo(cbind(vancouver$bloom_doy,
+               bloom_transformed),
+         col = c("black", "gray"), 
+         main = 'Original vs. Box-Cox transformed time series', 
+         ylab = '', xlab = '')
+# Not trend stationary
+kpss.test(vancouver.bloom.train$bloom_doy)
+fit.auto <- auto.arima(dc_seasonal_90s$avg_clearsky)
+summary(fit.auto)
+Acf(residuals(fit.auto))
+# pot forecast
+bloom.forecast <- forecast(fit.auto, h = 10, seasonal = T)
+plot(bloom.forecast)
+# plot test time series of the period 2001-2021
+lines(ts(coredata(vancouver.bloom.test$bloom_doy),
+         start = start(bloom.forecast$mean)[1],
+         frequency = 1), col = 'magenta')
+```
+
+```{r}
+trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather)
+
+lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
+
+cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather)
+
+summary(trees_lm)
+
+summary(lasso_lm)
+
+summary(cutdown_lasso_lm)
+
+
+cherry_pre1948 <- subset(cherry, year >= 1948)
+
+just_year <- lm(bloom_doy ~ year+lat+long, data = subset(cherry_pre1948, location == "washingtondc"))
+
+summary(just_year)
+
+swiss <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "vancouver"))
+japan <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "vancouver"))
+usa <- lm(bloom_doy ~ year, data = subset(cherry_pre1948, location == "washingtondc"))
+
+summary(usa)
+summary(swiss)
+summary(japan)
+
+
+ggplot(data = cherry_pre1948, aes(year,bloom_doy, color = location)) + geom_point() + geom_smooth(method = "lm")
+
+
+dc_seasonal_weather_1980s <- subset(dc_seasonal_weather, year >= 1980)
+
+ggplot(data = dc_seasonal_90s, aes(year,wt03_Winter)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,wt03_Summer)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,mdpr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,dapr_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,dapr_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_weather, aes(year,tobs_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,prcp_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmax_Spring)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmin_Fall)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data = dc_seasonal_90s, aes(year,tmin_Summer)) + geom_point() + geom_smooth(method = "lm")
+
+trees_lm <- lm(bloom_doy ~ tmin_Spring+tobs_Summer+year+tobs_Fall+tmax_Spring+tobs_Spring+prcp_Fall+snow_Spring+tmax_Winter+tmax_Fall,data = dc_seasonal_weather_1980s)
+
+summary(trees_lm)
+
+lasso_lm <- lm(bloom_doy ~ wt11_Fall+wt03_Winter+wt03_Summer+wt01_Spring+wt01_Fall+wt04_Spring+mdpr_Fall+dapr_Spring+dapr_Winter+dapr_Fall+tobs_Spring+snwd_Winter+snow_Spring+snow_Winter+prcp_Spring+prcp_Winter+prcp_Fall+prcp_Summer+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
+
+cutdown_lasso_lm <- lm(bloom_doy ~ wt03_Winter+wt03_Summer+mdpr_Fall+dapr_Spring+dapr_Fall+tobs_Spring+prcp_Fall+tmax_Spring+tmin_Fall+tmin_Summer,data = dc_seasonal_weather_1980s)
+
+summary(lasso_lm)
+
+summary(cutdown_lasso_lm)
 
 ```
